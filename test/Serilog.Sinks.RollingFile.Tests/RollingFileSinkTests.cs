@@ -1,14 +1,13 @@
-﻿#if FILE_IO && INTERNAL_TESTS
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Xunit;
+using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.RollingFile;
 using Serilog.Tests.Support;
 
-namespace Serilog.Tests.Sinks.RollingFile
+namespace Serilog.Sinks.RollingFile.Tests
 {
     public class RollingFileSinkTests
     {
@@ -37,9 +36,9 @@ namespace Serilog.Tests.Sinks.RollingFile
                 files =>
                 {
                     Assert.Equal(3, files.Count);
-                    Assert.True(!File.Exists(files[0]));
-                    Assert.True(File.Exists(files[1]));
-                    Assert.True(File.Exists(files[2]));
+                    Assert.True(!System.IO.File.Exists(files[0]));
+                    Assert.True(System.IO.File.Exists(files[1]));
+                    Assert.True(System.IO.File.Exists(files[2]));
                 });
         }
 
@@ -99,7 +98,7 @@ namespace Serilog.Tests.Sinks.RollingFile
                     log.Write(@event);
 
                     var expected = pathFormat.Replace("{Date}", @event.Timestamp.ToString("yyyyMMdd"));
-                    Assert.True(File.Exists(expected));
+                    Assert.True(System.IO.File.Exists(expected));
 
                     verified.Add(expected);
                 }
@@ -113,4 +112,3 @@ namespace Serilog.Tests.Sinks.RollingFile
         }
     }
 }
-#endif

@@ -7,6 +7,10 @@
     "dotnet-test-xunit": "1.0.0-rc2-build10025",
     "Serilog.Sinks.File": "2.0.0"
   },
+  "buildOptions": {
+    "keyFile": "../../assets/Serilog.snk",
+    "warningsAsErrors": true
+  },
   "frameworks": {
     "net4.5.2": {},
     "netcoreapp1.0": {

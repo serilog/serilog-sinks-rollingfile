@@ -13,7 +13,9 @@
     "Serilog.Sinks.File": "2.0.0"
   },
   "buildOptions": {
-    "keyFile": "../../assets/Serilog.snk"
+    "keyFile": "../../assets/Serilog.snk",
+    "xmlDoc": true,
+    "warningsAsErrors": true
   },
   "frameworks": {
     "net4.5": {},
