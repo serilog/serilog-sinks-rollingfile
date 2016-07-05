@@ -16,11 +16,15 @@ using System;
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
+using Serilog.Formatting;
 using Serilog.Formatting.Display;
 using Serilog.Sinks.RollingFile;
 
 namespace Serilog
 {
+    /// <summary>
+    /// Extends <see cref="LoggerSinkConfiguration"/> with rolling file configuration methods.
+    /// </summary>
     public static class RollingFileLoggerConfigurationExtensions
     {
         const int DefaultRetainedFileCountLimit = 31; // A long month of logs
@@ -62,9 +66,46 @@ namespace Serilog
             LoggingLevelSwitch levelSwitch = null,
             bool buffered = false)
         {
-            if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
-            if (outputTemplate == null) throw new ArgumentNullException(nameof(outputTemplate));
             var formatter = new MessageTemplateTextFormatter(outputTemplate, formatProvider);
+            return RollingFile(sinkConfiguration, formatter, pathFormat, restrictedToMinimumLevel, fileSizeLimitBytes,
+                retainedFileCountLimit, levelSwitch, buffered);
+        }
+
+        /// <summary>
+        /// Write log events to a series of files. Each file will be named according to
+        /// the date of the first log entry written to it. Only simple date-based rolling is
+        /// currently supported.
+        /// </summary>
+        /// <param name="sinkConfiguration">Logger sink configuration.</param>
+        /// <param name="formatter">Formatter to control how events are rendered into the file. To control
+        /// plain text formatting, use the overload that accepts an output template instead.</param>
+        /// <param name="pathFormat">String describing the location of the log files,
+        /// with {Date} in the place of the file date. E.g. "Logs\myapp-{Date}.log" will result in log
+        /// files such as "Logs\myapp-2013-10-20.log", "Logs\myapp-2013-10-21.log" and so on.</param>
+        /// <param name="restrictedToMinimumLevel">The minimum level for
+        /// events passed through the sink. Ignored when <paramref name="levelSwitch"/> is specified.</param>
+        /// <param name="levelSwitch">A switch allowing the pass-through minimum level
+        /// to be changed at runtime.</param>
+        /// <param name="fileSizeLimitBytes">The maximum size, in bytes, to which any single log file will be allowed to grow.
+        /// For unrestricted growth, pass null. The default is 1 GB.</param>
+        /// <param name="retainedFileCountLimit">The maximum number of log files that will be retained,
+        /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
+        /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
+        /// is false.</param>
+        /// <returns>Configuration object allowing method chaining.</returns>
+        /// <remarks>The file will be written using the UTF-8 character set.</remarks>
+        public static LoggerConfiguration RollingFile(
+            this LoggerSinkConfiguration sinkConfiguration,
+            ITextFormatter formatter,
+            string pathFormat,
+            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
+            long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
+            int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
+            LoggingLevelSwitch levelSwitch = null,
+            bool buffered = false)
+        {
+            if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
+            if (formatter == null) throw new ArgumentNullException(nameof(formatter));
             var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered);
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }

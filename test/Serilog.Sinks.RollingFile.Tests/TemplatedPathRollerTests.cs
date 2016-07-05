@@ -1,12 +1,10 @@
-﻿#if INTERNAL_TESTS
-
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Xunit;
 using Serilog.Sinks.RollingFile;
 
-namespace Serilog.Tests.Sinks.RollingFile
+namespace Serilog.Sinks.RollingFile.Tests
 {
     public class TemplatedPathRollerTests
     {
@@ -129,4 +127,3 @@ namespace Serilog.Tests.Sinks.RollingFile
     }
 }
 
-#endif
