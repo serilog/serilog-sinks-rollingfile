@@ -74,7 +74,7 @@ namespace Serilog.Sinks.RollingFile
             _textFormatter = textFormatter;
             _fileSizeLimitBytes = fileSizeLimitBytes;
             _retainedFileCountLimit = retainedFileCountLimit;
-            _encoding = encoding ?? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            _encoding = encoding ?? Encoding.UTF8;
             _buffered = buffered;
         }
 
