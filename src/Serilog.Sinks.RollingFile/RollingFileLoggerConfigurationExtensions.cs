@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Text;
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
@@ -51,6 +52,7 @@ namespace Serilog
         /// For unrestricted growth, pass null. The default is 1 GB.</param>
         /// <param name="retainedFileCountLimit">The maximum number of log files that will be retained,
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
+        /// <param name="encoding">Character encoding used to write the text file. The default is UTF-8.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
@@ -64,11 +66,12 @@ namespace Serilog
             long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
+            Encoding encoding = null,
             bool buffered = false)
         {
             var formatter = new MessageTemplateTextFormatter(outputTemplate, formatProvider);
             return RollingFile(sinkConfiguration, formatter, pathFormat, restrictedToMinimumLevel, fileSizeLimitBytes,
-                retainedFileCountLimit, levelSwitch, buffered);
+                retainedFileCountLimit, levelSwitch, encoding, buffered);
         }
 
         /// <summary>
@@ -90,6 +93,7 @@ namespace Serilog
         /// For unrestricted growth, pass null. The default is 1 GB.</param>
         /// <param name="retainedFileCountLimit">The maximum number of log files that will be retained,
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
+        /// <param name="encoding">Character encoding used to write the text file. The default is UTF-8.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
@@ -102,11 +106,12 @@ namespace Serilog
             long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
+            Encoding encoding = null,
             bool buffered = false)
         {
             if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
-            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered);
+            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, encoding: encoding, buffered: buffered);
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
     }
