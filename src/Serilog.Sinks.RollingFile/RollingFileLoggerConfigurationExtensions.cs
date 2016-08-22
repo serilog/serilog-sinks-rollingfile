@@ -111,11 +111,8 @@ namespace Serilog
             if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
 
-            if (shared)
-            {
-                if (buffered)
-                    throw new ArgumentException("Buffered writes are not available when file sharing is enabled.", nameof(buffered));
-            }
+            if (shared && buffered)
+                throw new ArgumentException("Buffered writes are not available when file sharing is enabled.", nameof(buffered));
 
             var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered, shared: shared);
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
