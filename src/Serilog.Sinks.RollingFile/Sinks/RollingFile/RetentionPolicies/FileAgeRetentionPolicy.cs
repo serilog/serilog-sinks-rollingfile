@@ -30,6 +30,9 @@ namespace Serilog.Sinks.RollingFile.Sinks.RollingFile.RetentionPolicies
             if (roller == null)
                 throw new ArgumentNullException("roller");
 
+            if (retainedFileAgeLimit <= TimeSpan.Zero)
+                throw new ArgumentException("Zero or negative value provided; retained file age limit must be a positive timespan");
+
             _roller = roller;
             _retainedFileAgeLimit = retainedFileAgeLimit;
         }
