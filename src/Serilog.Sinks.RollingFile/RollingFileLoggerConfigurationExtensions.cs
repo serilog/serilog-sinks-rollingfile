@@ -53,6 +53,9 @@ namespace Serilog
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
+        /// <param name="retainedFileAgeLimit">The maximum age of log files that will be retained,
+        /// including the current log file. For unlimited retention, pass null (default).
+        /// This will be applied after <paramref name="retainedFileCountLimit"/>.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 character set.</remarks>
         public static LoggerConfiguration RollingFile(
@@ -64,11 +67,12 @@ namespace Serilog
             long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
-            bool buffered = false)
+            bool buffered = false,
+            TimeSpan? retainedFileAgeLimit = null)
         {
             var formatter = new MessageTemplateTextFormatter(outputTemplate, formatProvider);
             return RollingFile(sinkConfiguration, formatter, pathFormat, restrictedToMinimumLevel, fileSizeLimitBytes,
-                retainedFileCountLimit, levelSwitch, buffered);
+                retainedFileCountLimit, levelSwitch, buffered, retainedFileAgeLimit);
         }
 
         /// <summary>
@@ -92,6 +96,9 @@ namespace Serilog
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
+        /// <param name="retainedFileAgeLimit">The maximum age of log files that will be retained,
+        /// including the current log file. For unlimited retention, pass null (default).
+        /// This will be applied after <paramref name="retainedFileCountLimit"/>.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 character set.</remarks>
         public static LoggerConfiguration RollingFile(
@@ -102,11 +109,12 @@ namespace Serilog
             long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
-            bool buffered = false)
+            bool buffered = false,
+            TimeSpan? retainedFileAgeLimit = null)
         {
             if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
-            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered);
+            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered, retainedFileAgeLimit: retainedFileAgeLimit);
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
     }

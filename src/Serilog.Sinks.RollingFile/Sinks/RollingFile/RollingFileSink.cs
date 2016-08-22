@@ -14,6 +14,7 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,6 +24,8 @@ using Serilog.Debugging;
 using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Sinks.File;
+using Serilog.Sinks.RollingFile.RetentionPolicies;
+using Serilog.Sinks.RollingFile.Sinks.RollingFile.RetentionPolicies;
 
 namespace Serilog.Sinks.RollingFile
 {
@@ -36,7 +39,7 @@ namespace Serilog.Sinks.RollingFile
         readonly TemplatedPathRoller _roller;
         readonly ITextFormatter _textFormatter;
         readonly long? _fileSizeLimitBytes;
-        readonly int? _retainedFileCountLimit;
+        readonly IList<IRetentionPolicy> _retentionPolicies;
         readonly Encoding _encoding;
         readonly bool _buffered;
         readonly object _syncRoot = new object();
@@ -53,7 +56,11 @@ namespace Serilog.Sinks.RollingFile
         /// <param name="fileSizeLimitBytes">The maximum size, in bytes, to which a log file will be allowed to grow.
         /// For unrestricted growth, pass null. The default is 1 GB.</param>
         /// <param name="retainedFileCountLimit">The maximum number of log files that will be retained,
-        /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
+        /// including the current log file. For unlimited retention, pass null. The default is 31.
+        /// Exclusive with <paramref name="retainedFileAgeLimit"/>.</param>
+        /// <param name="retainedFileAgeLimit">The maximum age of log files that will be retained,
+        /// including the current log file. For unlimited retention, pass null (default).
+        /// This will be applied after <paramref name="retainedFileCountLimit"/>.</param>
         /// <param name="encoding">Character encoding used to write the text file. The default is UTF-8.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
@@ -64,16 +71,26 @@ namespace Serilog.Sinks.RollingFile
                               long? fileSizeLimitBytes,
                               int? retainedFileCountLimit,
                               Encoding encoding = null,
-                              bool buffered = false)
+                              bool buffered = false,
+                              TimeSpan? retainedFileAgeLimit = null)
         {
             if (pathFormat == null) throw new ArgumentNullException(nameof(pathFormat));
             if (fileSizeLimitBytes.HasValue && fileSizeLimitBytes < 0) throw new ArgumentException("Negative value provided; file size limit must be non-negative");
             if (retainedFileCountLimit.HasValue && retainedFileCountLimit < 1) throw new ArgumentException("Zero or negative value provided; retained file count limit must be at least 1");
+            if (retainedFileAgeLimit.HasValue && retainedFileAgeLimit <= TimeSpan.Zero) throw new ArgumentException("Zero or negative value provided; retained file age limit must be a positive time span");
 
             _roller = new TemplatedPathRoller(pathFormat);
             _textFormatter = textFormatter;
             _fileSizeLimitBytes = fileSizeLimitBytes;
-            _retainedFileCountLimit = retainedFileCountLimit;
+            _retentionPolicies = new List<IRetentionPolicy>();
+            if (retainedFileCountLimit.HasValue)
+            {
+                _retentionPolicies.Add(new FileCountRetentionPolicy(_roller, retainedFileCountLimit.Value));
+            }
+            if (retainedFileAgeLimit.HasValue)
+            {
+                _retentionPolicies.Add(new FileAgeRetentionPolicy(_roller, retainedFileAgeLimit.Value));
+            }
             _encoding = encoding ?? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
             _buffered = buffered;
         }
@@ -163,45 +180,16 @@ namespace Serilog.Sinks.RollingFile
                     throw;
                 }
 
-                ApplyRetentionPolicy(path);
+                ApplyRetentionPolicies(path);
                 return;
             }
         }
 
-        void ApplyRetentionPolicy(string currentFilePath)
+        void ApplyRetentionPolicies(string currentFilePath)
         {
-            if (_retainedFileCountLimit == null) return;
-
-            var currentFileName = Path.GetFileName(currentFilePath);
-
-            // We consider the current file to exist, even if nothing's been written yet,
-            // because files are only opened on response to an event being processed.
-            var potentialMatches = Directory.GetFiles(_roller.LogFileDirectory, _roller.DirectorySearchPattern)
-                .Select(Path.GetFileName)
-                .Union(new [] { currentFileName });
-
-            var newestFirst = _roller
-                .SelectMatches(potentialMatches)
-                .OrderByDescending(m => m.Date)
-                .ThenByDescending(m => m.SequenceNumber)
-                .Select(m => m.Filename);
-
-            var toRemove = newestFirst
-                .Where(n => StringComparer.OrdinalIgnoreCase.Compare(currentFileName, n) != 0)
-                .Skip(_retainedFileCountLimit.Value - 1)
-                .ToList();
-
-            foreach (var obsolete in toRemove)
+            foreach (var policy in _retentionPolicies)
             {
-                var fullPath = Path.Combine(_roller.LogFileDirectory, obsolete);
-                try
-                {
-                    System.IO.File.Delete(fullPath);
-                }
-                catch (Exception ex)
-                {
-                    SelfLog.WriteLine("Error {0} while removing obsolete file {1}", ex, fullPath);
-                }
+                policy.Apply(currentFilePath);
             }
         }
 
