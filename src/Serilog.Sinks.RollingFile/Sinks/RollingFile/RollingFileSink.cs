@@ -39,11 +39,12 @@ namespace Serilog.Sinks.RollingFile
         readonly int? _retainedFileCountLimit;
         readonly Encoding _encoding;
         readonly bool _buffered;
+        readonly bool _shared;
         readonly object _syncRoot = new object();
 
         bool _isDisposed;
         DateTime? _nextCheckpoint;
-        FileSink _currentFile;
+        ILogEventSink _currentFile;
 
         /// <summary>Construct a <see cref="RollingFileSink"/>.</summary>
         /// <param name="pathFormat">String describing the location of the log files,
@@ -54,9 +55,10 @@ namespace Serilog.Sinks.RollingFile
         /// For unrestricted growth, pass null. The default is 1 GB.</param>
         /// <param name="retainedFileCountLimit">The maximum number of log files that will be retained,
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
-        /// <param name="encoding">Character encoding used to write the text file. The default is UTF-8.</param>
+        /// <param name="encoding">Character encoding used to write the text file. The default is UTF-8 without BOM.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
+        /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 character set.</remarks>
         public RollingFileSink(string pathFormat,
@@ -64,18 +66,25 @@ namespace Serilog.Sinks.RollingFile
                               long? fileSizeLimitBytes,
                               int? retainedFileCountLimit,
                               Encoding encoding = null,
-                              bool buffered = false)
+                              bool buffered = false,
+                              bool shared = false)
         {
             if (pathFormat == null) throw new ArgumentNullException(nameof(pathFormat));
             if (fileSizeLimitBytes.HasValue && fileSizeLimitBytes < 0) throw new ArgumentException("Negative value provided; file size limit must be non-negative");
             if (retainedFileCountLimit.HasValue && retainedFileCountLimit < 1) throw new ArgumentException("Zero or negative value provided; retained file count limit must be at least 1");
 
+#if !SHARING
+            if (shared)
+                throw new NotSupportedException("File sharing is not supported on this platform.");
+#endif
+
             _roller = new TemplatedPathRoller(pathFormat);
             _textFormatter = textFormatter;
             _fileSizeLimitBytes = fileSizeLimitBytes;
             _retainedFileCountLimit = retainedFileCountLimit;
-            _encoding = encoding ?? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            _encoding = encoding;
             _buffered = buffered;
+            _shared = shared;
         }
 
         /// <summary>
@@ -98,8 +107,7 @@ namespace Serilog.Sinks.RollingFile
                 // If the file was unable to be opened on the last attempt, it will remain
                 // null until the next checkpoint passes, at which time another attempt will be made to
                 // open it.
-                if (_currentFile != null)
-                    _currentFile.Emit(logEvent);
+                _currentFile?.Emit(logEvent);
             }
         }
 
@@ -148,7 +156,13 @@ namespace Serilog.Sinks.RollingFile
 
                 try
                 {
+#if SHARING
+                    _currentFile = _shared ?
+                        (ILogEventSink)new SharedFileSink(path, _textFormatter, _fileSizeLimitBytes, _encoding) :
+                        new FileSink(path, _textFormatter, _fileSizeLimitBytes, _encoding, _buffered);
+#else
                     _currentFile = new FileSink(path, _textFormatter, _fileSizeLimitBytes, _encoding, _buffered);
+#endif
                 }
                 catch (IOException ex)
                 {
@@ -223,7 +237,7 @@ namespace Serilog.Sinks.RollingFile
         {
             if (_currentFile != null)
             {
-                _currentFile.Dispose();
+                (_currentFile as IDisposable)?.Dispose();
                 _currentFile = null;
             }
 
