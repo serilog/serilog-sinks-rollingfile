@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Serilog.Sinks.RollingFile.RetentionPolicies;
 using System;
 using System.IO;
 using System.Linq;
 using Serilog.Debugging;
 
-namespace Serilog.Sinks.RollingFile.Sinks.RollingFile.RetentionPolicies
+namespace Serilog.Sinks.RollingFile.RetentionPolicies
 {
     internal class FileAgeRetentionPolicy : IRetentionPolicy
     {
