@@ -27,7 +27,7 @@ namespace Serilog.Sinks.RollingFile.RetentionPolicies
         public FileCountRetentionPolicy(TemplatedPathRoller roller, int? retainedFileCountLimit)
         {
             if (roller == null)
-                throw new ArgumentNullException("roller");
+                throw new ArgumentNullException(nameof(roller));
 
             if (retainedFileCountLimit.HasValue && retainedFileCountLimit < 1)
                 throw new ArgumentException("Zero or negative value provided; retained file count limit must be at least 1");
