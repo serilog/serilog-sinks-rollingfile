@@ -54,6 +54,9 @@ namespace Serilog
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
         /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
+        /// <param name="retainedFileAgeLimit">The maximum age of log files that will be retained,
+        /// including the current log file. For unlimited retention, pass null (default).
+        /// This will be applied after <paramref name="retainedFileCountLimit"/>.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 encoding without a byte-order mark.</remarks>
         public static LoggerConfiguration RollingFile(
@@ -66,11 +69,12 @@ namespace Serilog
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
             bool buffered = false,
-            bool shared = false)
+            bool shared = false,
+            TimeSpan? retainedFileAgeLimit = null)
         {
             var formatter = new MessageTemplateTextFormatter(outputTemplate, formatProvider);
             return RollingFile(sinkConfiguration, formatter, pathFormat, restrictedToMinimumLevel, fileSizeLimitBytes,
-                retainedFileCountLimit, levelSwitch, buffered, shared);
+                retainedFileCountLimit, levelSwitch, buffered, shared, retainedFileAgeLimit);
         }
 
         /// <summary>
@@ -95,6 +99,9 @@ namespace Serilog
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
         /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
+        /// <param name="retainedFileAgeLimit">The maximum age of log files that will be retained,
+        /// including the current log file. For unlimited retention, pass null (default).
+        /// This will be applied after <paramref name="retainedFileCountLimit"/>.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 encoding without a byte-order mark.</remarks>
         public static LoggerConfiguration RollingFile(
@@ -106,15 +113,13 @@ namespace Serilog
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
             bool buffered = false,
-            bool shared = false)
+            bool shared = false,
+            TimeSpan? retainedFileAgeLimit = null)
         {
             if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
-
-            if (shared && buffered)
-                throw new ArgumentException("Buffered writes are not available when file sharing is enabled.", nameof(buffered));
-
-            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered, shared: shared);
+            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit,
+                buffered: buffered, shared: shared, retainedFileAgeLimit: retainedFileAgeLimit);
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
     }

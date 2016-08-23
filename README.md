@@ -44,6 +44,13 @@ For the same reason, only **the most recent 31 files** are retained by default (
     .WriteTo.RollingFile("log-{Date}.txt", retainedFileCountLimit: null)
 ```
 
+In addition, it is possible to set a maximum age for the log files that will be retained. To set this limit, pass the `retainedFileAgeLimit` parameter.
+
+```csharp
+    .WriteTo.RollingFile("log-{Date}.txt", retainedFileAgeLimit: TimeSpan.FromDays(31))
+```
+Note that this will be applied *after* the limit set by `retainedFileCountLimit`. To ignore the file count limit and only use file age, `retainedFileCountLimit` should be set to `null`.
+
 ### XML `<appSettings>` configuration
 
 To use the rolling file sink with the [Serilog.Settings.AppSettings](https://github.com/serilog/serilog-settings-appsettings) package, first install that package if you haven't already done so:

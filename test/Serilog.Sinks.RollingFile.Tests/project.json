@@ -1,16 +1,17 @@
 {
+  "version": "2.0.0",
   "testRunner": "xunit",
   "dependencies": {
     "Serilog.Sinks.RollingFile": { "target": "project" },
     "xunit": "2.1.0",
-    "dotnet-test-xunit": "1.0.0-rc2-build10025"
+    "dotnet-test-xunit": "1.0.0-rc2-build10025",
+    "Serilog.Sinks.File": "3.0.0-dev-00735"
   },
   "buildOptions": {
     "keyFile": "../../assets/Serilog.snk",
     "warningsAsErrors": true
   },
   "frameworks": {
-    "net4.5.2": {},
     "netcoreapp1.0": {
       "dependencies": {
         "Microsoft.NETCore.App": {
@@ -22,6 +23,9 @@
         "dnxcore50",
         "portable-net45+win8"
       ]
+    },
+    "net4.5.2": {
+      "buildOptions": { "define": [ "SHARING" ] }
     }
   }
 }

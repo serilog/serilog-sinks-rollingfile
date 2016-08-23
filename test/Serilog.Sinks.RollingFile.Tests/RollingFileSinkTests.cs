@@ -15,6 +15,7 @@ namespace Serilog.Sinks.RollingFile.Tests
         public void LogEventsAreEmittedToTheFileNamedAccordingToTheEventTimestamp()
         {
             TestRollingEventSequence(Some.InformationEvent());
+            TestRollingEventSequenceWithAge(Some.InformationEvent());
         }
 
         [Fact]
@@ -23,6 +24,7 @@ namespace Serilog.Sinks.RollingFile.Tests
             var e1 = Some.InformationEvent();
             var e2 = Some.InformationEvent(e1.Timestamp.AddDays(1));
             TestRollingEventSequence(e1, e2);
+            TestRollingEventSequenceWithAge(e1, e2);
         }
 
         [Fact]
@@ -33,6 +35,23 @@ namespace Serilog.Sinks.RollingFile.Tests
                      e3 = Some.InformationEvent(e2.Timestamp.AddDays(5));
 
             TestRollingEventSequence(new[] { e1, e2, e3 }, 2,
+                files =>
+                {
+                    Assert.Equal(3, files.Count);
+                    Assert.True(!System.IO.File.Exists(files[0]));
+                    Assert.True(System.IO.File.Exists(files[1]));
+                    Assert.True(System.IO.File.Exists(files[2]));
+                });
+        }
+
+        [Fact]
+        public void WhenRetentionAgeIsSetOldFilesAreDeleted()
+        {
+            LogEvent e1 = Some.InformationEvent(DateTimeOffset.Now - TimeSpan.FromDays(5)),
+                     e2 = Some.InformationEvent(e1.Timestamp.AddDays(2)),
+                     e3 = Some.InformationEvent(e2.Timestamp.AddDays(3));
+
+            TestRollingEventSequenceWithAge(new[] { e1, e2, e3 }, TimeSpan.FromDays(4),
                 files =>
                 {
                     Assert.Equal(3, files.Count);
@@ -55,7 +74,7 @@ namespace Serilog.Sinks.RollingFile.Tests
             try
             {
                 log = new LoggerConfiguration()
-                    .WriteTo.RollingFile(pathFormat, retainedFileCountLimit: 3)
+                    .WriteTo.RollingFile(pathFormat, retainedFileCountLimit: 3, retainedFileAgeLimit: TimeSpan.FromDays(3))
                     .CreateLogger();
 
                 log.Write(Some.InformationEvent());
@@ -70,9 +89,16 @@ namespace Serilog.Sinks.RollingFile.Tests
             }
         }
 
+
+
         static void TestRollingEventSequence(params LogEvent[] events)
         {
             TestRollingEventSequence(events, null, f => {});
+        }
+
+        static void TestRollingEventSequenceWithAge(params LogEvent[] events)
+        {
+            TestRollingEventSequenceWithAge(events, null, f => { });
         }
 
         static void TestRollingEventSequence(
@@ -86,6 +112,42 @@ namespace Serilog.Sinks.RollingFile.Tests
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(pathFormat, retainedFileCountLimit: retainedFiles)
+                .CreateLogger();
+
+            var verified = new List<string>();
+
+            try
+            {
+                foreach (var @event in events)
+                {
+                    Clock.SetTestDateTimeNow(@event.Timestamp.DateTime);
+                    log.Write(@event);
+
+                    var expected = pathFormat.Replace("{Date}", @event.Timestamp.ToString("yyyyMMdd"));
+                    Assert.True(System.IO.File.Exists(expected));
+
+                    verified.Add(expected);
+                }
+            }
+            finally
+            {
+                ((IDisposable)log).Dispose();
+                verifyWritten(verified);
+                Directory.Delete(folder, true);
+            }
+        }
+
+        static void TestRollingEventSequenceWithAge(
+            IEnumerable<LogEvent> events,
+            TimeSpan? retainedAge,
+            Action<IList<string>> verifyWritten)
+        {
+            var fileName = Some.String() + "-{Date}.txt";
+            var folder = Some.TempFolderPath();
+            var pathFormat = Path.Combine(folder, fileName);
+            
+            var log = new LoggerConfiguration()
+                .WriteTo.RollingFile(pathFormat, retainedFileCountLimit: null, retainedFileAgeLimit: retainedAge)
                 .CreateLogger();
 
             var verified = new List<string>();
