@@ -53,8 +53,9 @@ namespace Serilog
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
+        /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
-        /// <remarks>The file will be written using the UTF-8 character set.</remarks>
+        /// <remarks>The file will be written using the UTF-8 encoding without a byte-order mark.</remarks>
         public static LoggerConfiguration RollingFile(
             this LoggerSinkConfiguration sinkConfiguration,
             string pathFormat,
@@ -64,11 +65,12 @@ namespace Serilog
             long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
-            bool buffered = false)
+            bool buffered = false,
+            bool shared = false)
         {
             var formatter = new MessageTemplateTextFormatter(outputTemplate, formatProvider);
             return RollingFile(sinkConfiguration, formatter, pathFormat, restrictedToMinimumLevel, fileSizeLimitBytes,
-                retainedFileCountLimit, levelSwitch, buffered);
+                retainedFileCountLimit, levelSwitch, buffered, shared);
         }
 
         /// <summary>
@@ -92,8 +94,9 @@ namespace Serilog
         /// including the current log file. For unlimited retention, pass null. The default is 31.</param>
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
+        /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
-        /// <remarks>The file will be written using the UTF-8 character set.</remarks>
+        /// <remarks>The file will be written using the UTF-8 encoding without a byte-order mark.</remarks>
         public static LoggerConfiguration RollingFile(
             this LoggerSinkConfiguration sinkConfiguration,
             ITextFormatter formatter,
@@ -102,11 +105,16 @@ namespace Serilog
             long? fileSizeLimitBytes = DefaultFileSizeLimitBytes,
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
-            bool buffered = false)
+            bool buffered = false,
+            bool shared = false)
         {
             if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
-            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered);
+
+            if (shared && buffered)
+                throw new ArgumentException("Buffered writes are not available when file sharing is enabled.", nameof(buffered));
+
+            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered, shared: shared);
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
     }
