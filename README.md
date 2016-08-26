@@ -28,7 +28,7 @@ log-20160701.txt
 log-20160702.txt
 ```
 
-> **Important:** Only one process may write to a log file at a given time. For multi-process scenarios, either use separate files or [one of the non-file-based sinks](https://github.com/serilog/serilog/wiki/Provided-Sinks).
+> **Important:** By default, only one process may write to a log file at a given time. See _Shared log files_ below for information on multi-process sharing.
 
 ### Limits
 
@@ -144,6 +144,14 @@ To write events to the file in an alternative format such as JSON, pass an `ITex
 
 ```csharp
     .WriteTo.RollingFile(new JsonFormatter(), "log-{Date}.txt")
+```
+
+### Shared log files
+
+To enable multi-process shared log files, set `shared` to `true`:
+
+```csharp
+    .WriteTo.RollingFile("log-{Date}.txt", shared: true)
 ```
 
 ### Performance
