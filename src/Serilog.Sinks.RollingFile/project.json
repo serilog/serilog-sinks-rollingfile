@@ -1,5 +1,5 @@
 ﻿{
-  "version": "3.0.0-*",
+  "version": "3.0.1-*",
   "description": "The rolling file sink for Serilog - Simple .NET logging with fully-structured events",
   "authors": [ "Serilog Contributors" ],
   "packOptions": {
@@ -9,7 +9,7 @@
     "iconUrl": "http://serilog.net/images/serilog-sink-nuget.png"
   },
   "dependencies": {
-    "Serilog.Sinks.File": "3.0.0"
+    "Serilog.Sinks.File": "3.0.1"
   },
   "buildOptions": {
     "keyFile": "../../assets/Serilog.snk",
