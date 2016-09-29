@@ -18,16 +18,16 @@ namespace Serilog.Sinks.RollingFile
 {
     class RollingLogFile
     {
-        public RollingLogFile(string filename, DateTime date, int sequenceNumber)
+        public RollingLogFile(string filename, DateTime dateTime, int sequenceNumber)
         {
             Filename = filename;
-            Date = date;
+            DateTime = dateTime;
             SequenceNumber = sequenceNumber;
         }
 
         public string Filename { get; }
 
-        public DateTime Date { get; }
+        public DateTime DateTime { get; }
 
         public int SequenceNumber { get; }
     }

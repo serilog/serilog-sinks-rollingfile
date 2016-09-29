@@ -126,11 +126,12 @@ namespace Serilog.Sinks.RollingFile
 
         void OpenFile(DateTime now)
         {
-            var date = now.Date;
+            var currentCheckpoint = _roller.GetCurrentCheckpoint(now);
 
             // We only take one attempt at it because repeated failures
             // to open log files REALLY slow an app down.
-            _nextCheckpoint = date.AddDays(1);
+
+            _nextCheckpoint = _roller.GetNextCheckpoint(now);
 
             var existingFiles = Enumerable.Empty<string>();
             try
@@ -140,13 +141,13 @@ namespace Serilog.Sinks.RollingFile
             }
             catch (DirectoryNotFoundException) { }
 
-            var latestForThisDate = _roller
+            var latestForThisDateTime = _roller
                 .SelectMatches(existingFiles)
-                .Where(m => m.Date == date)
+                .Where(m => m.DateTime == currentCheckpoint)
                 .OrderByDescending(m => m.SequenceNumber)
                 .FirstOrDefault();
 
-            var sequence = latestForThisDate != null ? latestForThisDate.SequenceNumber : 0;
+            var sequence = latestForThisDateTime != null ? latestForThisDateTime.SequenceNumber : 0;
 
             const int maxAttempts = 3;
             for (var attempt = 0; attempt < maxAttempts; attempt++)
@@ -196,7 +197,7 @@ namespace Serilog.Sinks.RollingFile
 
             var newestFirst = _roller
                 .SelectMatches(potentialMatches)
-                .OrderByDescending(m => m.Date)
+                .OrderByDescending(m => m.DateTime)
                 .ThenByDescending(m => m.SequenceNumber)
                 .Select(m => m.Filename);
 
