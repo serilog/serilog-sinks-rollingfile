@@ -121,7 +121,7 @@ namespace Serilog.Sinks.RollingFile.Tests
             var roller = new TemplatedPathRoller("log-{Date}.txt");
             const string newer = "log-20150101.txt";
             const string older = "log-20141231.txt";
-            var matched = roller.SelectMatches(new[] { older, newer }).OrderByDescending(m => m.Date).Select(m => m.Filename).ToArray();
+            var matched = roller.SelectMatches(new[] { older, newer }).OrderByDescending(m => m.DateTime).Select(m => m.Filename).ToArray();
             Assert.Equal(new[] { newer, older }, matched);
         }
     }
