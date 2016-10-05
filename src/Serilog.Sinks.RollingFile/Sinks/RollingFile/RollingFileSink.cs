@@ -141,13 +141,13 @@ namespace Serilog.Sinks.RollingFile
             }
             catch (DirectoryNotFoundException) { }
 
-            var latestForThisDateTime = _roller
+            var latestForThisCheckpoint = _roller
                 .SelectMatches(existingFiles)
                 .Where(m => m.DateTime == currentCheckpoint)
                 .OrderByDescending(m => m.SequenceNumber)
                 .FirstOrDefault();
 
-            var sequence = latestForThisDateTime != null ? latestForThisDateTime.SequenceNumber : 0;
+            var sequence = latestForThisCheckpoint != null ? latestForThisCheckpoint.SequenceNumber : 0;
 
             const int maxAttempts = 3;
             for (var attempt = 0; attempt < maxAttempts; attempt++)

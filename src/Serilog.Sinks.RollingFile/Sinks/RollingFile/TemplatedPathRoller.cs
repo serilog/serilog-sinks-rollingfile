@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
- 
+
+using Serilog.Sinks.RollingFile.Sinks.RollingFile;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -26,43 +27,34 @@ namespace Serilog.Sinks.RollingFile
     //
     class TemplatedPathRoller
     {
-        const string OldStyleDateSpecifier = "{0}";
-        const string DateSpecifier = "{Date}";
-        const string DateFormat = "yyyyMMdd";
-        const string HourSpecifier = "{Hour}";
-        const string HourFormat = "yyyyMMddHH";
-        const string HalfHourSpecifier = "{HalfHour}";
-        const string HalfHourFormat = "yyyyMMddHHmm";
+        
         const string DefaultSeparator = "-";
 
-        const string MatcherMarkSpecifier = "date";
-        const string MatcherMarkInc = "inc";
+        const string SpecifierMatchGroup = "specifier";
+        const string SequenceNumberMatchGroup = "sequence";
 
         readonly string _pathTemplate;
         readonly Regex _filenameMatcher;
-        readonly SpecifierTypeEnum _specifierType = SpecifierTypeEnum.None;
-        // Concret used Date or Hour specifier.
-        readonly string _usedSpecifier = string.Empty;
-        readonly string _usedFormat = string.Empty;
+        readonly Specifier _specifier = null;
 
         public TemplatedPathRoller(string pathTemplate)
         {
             if (pathTemplate == null) throw new ArgumentNullException(nameof(pathTemplate));
 
-            if (pathTemplate.Contains(OldStyleDateSpecifier))
-                throw new ArgumentException("The old-style date specifier " + OldStyleDateSpecifier +
-                    " is no longer supported, instead please use " + DateSpecifier);
+            if (pathTemplate.Contains(Specifier.OldStyleDateToken))
+                throw new ArgumentException("The old-style date specifier " + Specifier.OldStyleDateToken +
+                    " is no longer supported, instead please use " + Specifier.DateToken);
 
             int numSpecifiers = 0;
-            if (pathTemplate.Contains(DateSpecifier))
+            if (pathTemplate.Contains(Specifier.DateToken))
                 numSpecifiers++;
-            if (pathTemplate.Contains(HourSpecifier))
+            if (pathTemplate.Contains(Specifier.HourToken))
                 numSpecifiers++;
-            if (pathTemplate.Contains(HalfHourSpecifier))
+            if (pathTemplate.Contains(Specifier.HalfHourToken))
                 numSpecifiers++;
             if (numSpecifiers > 1)
-                throw new ArgumentException("The date, hour and half-hour specifiers (" + 
-                    DateSpecifier + "," + HourSpecifier + "," + HalfHourSpecifier +
+                throw new ArgumentException("The date, hour and half-hour specifiers (" +
+                    Specifier.DateToken + "," + Specifier.HourToken + "," + Specifier.HalfHourToken +
                     ") cannot be used at the same time");
 
             var directory = Path.GetDirectoryName(pathTemplate);
@@ -73,59 +65,42 @@ namespace Serilog.Sinks.RollingFile
 
             directory = Path.GetFullPath(directory);
 
-            if (directory.Contains(DateSpecifier))
+            if (directory.Contains(Specifier.DateToken))
                 throw new ArgumentException("The date cannot form part of the directory name");
-            if (directory.Contains(HourSpecifier))
+            if (directory.Contains(Specifier.HourToken))
                 throw new ArgumentException("The hour specifiers cannot form part of the directory name");
-            if (directory.Contains(HalfHourSpecifier))
+            if (directory.Contains(Specifier.HalfHourToken))
                 throw new ArgumentException("The half-hour specifiers cannot form part of the directory name");
 
             var filenameTemplate = Path.GetFileName(pathTemplate);
-            if (!filenameTemplate.Contains(DateSpecifier) && 
-                !filenameTemplate.Contains(HourSpecifier) &&
-                !filenameTemplate.Contains(HalfHourSpecifier))
+            if (!filenameTemplate.Contains(Specifier.DateToken) && 
+                !filenameTemplate.Contains(Specifier.HourToken) &&
+                !filenameTemplate.Contains(Specifier.HalfHourToken))
             {
                 // If the file name doesn't use any of the admitted specifiers then it is added the date specifier
                 // as de default one.
                 filenameTemplate = Path.GetFileNameWithoutExtension(filenameTemplate) + DefaultSeparator +
-                    DateSpecifier + Path.GetExtension(filenameTemplate);
+                    Specifier.DateToken + Path.GetExtension(filenameTemplate);
             }
 
             //---
-            // From this point forward we don't reference the Date or Hour concret specifiers and formats : 
-            // we will reference only the one set as "used" (_usedSpecifier and _usedFormat).
+            // From this point forward we don't reference the Date, Hour or HalfHour concret tokens and formats : 
+            // we will reference only the one configured as _specifier.
 
-            if (filenameTemplate.Contains(DateSpecifier))
-            {
-                _usedSpecifier = DateSpecifier;
-                _usedFormat = DateFormat;
-                _specifierType = SpecifierTypeEnum.Date;
-            }
-            else if (filenameTemplate.Contains(HourSpecifier))
-            {
-                _usedSpecifier = HourSpecifier;
-                _usedFormat = HourFormat;
-                _specifierType = SpecifierTypeEnum.Hour;
-            }
-            else if (filenameTemplate.Contains(HalfHourSpecifier))
-            {
-                _usedSpecifier = HalfHourSpecifier;
-                _usedFormat = HalfHourFormat;
-                _specifierType = SpecifierTypeEnum.HalfHour;
-            }
+            _specifier = Specifier.GetFromTemplate(filenameTemplate);
 
-            var indexOfSpecifier = filenameTemplate.IndexOf(_usedSpecifier, StringComparison.Ordinal);
+            var indexOfSpecifier = filenameTemplate.IndexOf(_specifier.Token, StringComparison.Ordinal);
             var prefix = filenameTemplate.Substring(0, indexOfSpecifier);
-            var suffix = filenameTemplate.Substring(indexOfSpecifier + _usedSpecifier.Length);
+            var suffix = filenameTemplate.Substring(indexOfSpecifier + _specifier.Token.Length);
             _filenameMatcher = new Regex(
                 "^" +
                 Regex.Escape(prefix) +
-                "(?<" + MatcherMarkSpecifier + ">\\d{" + _usedFormat.Length + "})" +
-                "(?<" + MatcherMarkInc + ">_[0-9]{3,}){0,1}" +
+                "(?<" + SpecifierMatchGroup + ">\\d{" + _specifier.Format.Length + "})" +
+                "(?<" + SequenceNumberMatchGroup + ">_[0-9]{3,}){0,1}" +
                 Regex.Escape(suffix) +
                 "$");
 
-            DirectorySearchPattern = filenameTemplate.Replace(_usedSpecifier, "*");
+            DirectorySearchPattern = filenameTemplate.Replace(_specifier.Token, "*");
             LogFileDirectory = directory;
             _pathTemplate = Path.Combine(LogFileDirectory, filenameTemplate);
         }
@@ -138,12 +113,12 @@ namespace Serilog.Sinks.RollingFile
         {
             DateTime currentCheckpoint = GetCurrentCheckpoint(date);
 
-            var tok = currentCheckpoint.ToString(_usedFormat, CultureInfo.InvariantCulture);
+            var tok = currentCheckpoint.ToString(_specifier.Format, CultureInfo.InvariantCulture);
 
             if (sequenceNumber != 0)
                 tok += "_" + sequenceNumber.ToString("000", CultureInfo.InvariantCulture);
 
-            path = _pathTemplate.Replace(_usedSpecifier, tok);
+            path = _pathTemplate.Replace(_specifier.Token, tok);
         }
 
         public IEnumerable<RollingLogFile> SelectMatches(IEnumerable<string> filenames)
@@ -154,7 +129,7 @@ namespace Serilog.Sinks.RollingFile
                 if (match.Success)
                 {
                     var inc = 0;
-                    var incGroup = match.Groups[MatcherMarkInc];
+                    var incGroup = match.Groups[SequenceNumberMatchGroup];
                     if (incGroup.Captures.Count != 0)
                     {
                         var incPart = incGroup.Captures[0].Value.Substring(1);
@@ -162,10 +137,10 @@ namespace Serilog.Sinks.RollingFile
                     }
 
                     DateTime dateTime;
-                    var dateTimePart = match.Groups[MatcherMarkSpecifier].Captures[0].Value;
+                    var dateTimePart = match.Groups[SpecifierMatchGroup].Captures[0].Value;
                     if (!DateTime.TryParseExact(
                         dateTimePart,
-                        _usedFormat,
+                        _specifier.Format,
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.None,
                         out dateTime))
@@ -176,46 +151,16 @@ namespace Serilog.Sinks.RollingFile
             }
         }
 
-        public DateTime GetCurrentCheckpoint(DateTime date)
+        public DateTime GetCurrentCheckpoint(DateTime instant)
         {
-            if (_specifierType == SpecifierTypeEnum.Hour)
-            {
-                return date.Date.AddHours(date.Hour);
-            }
-            else if (_specifierType == SpecifierTypeEnum.HalfHour)
-            {
-                DateTime auxDT = date.Date.AddHours(date.Hour);
-                if (date.Minute >= 30)
-                    auxDT = auxDT.AddMinutes(30);
-                return auxDT;
-            }
-
-            return date.Date;
+            return _specifier.GetCurrentCheckpoint(instant);
         }
 
-        public DateTime GetNextCheckpoint(DateTime date)
+        public DateTime GetNextCheckpoint(DateTime instant)
         {
-            DateTime currentCheckpoint = GetCurrentCheckpoint(date);
-
-            if (_specifierType == SpecifierTypeEnum.Hour)
-            {
-                return currentCheckpoint.AddHours(1);
-            }
-            else if (_specifierType == SpecifierTypeEnum.HalfHour)
-            {
-                return currentCheckpoint.AddMinutes(30);
-            }
-
-            return currentCheckpoint.AddDays(1);
+            return _specifier.GetNextCheckpoint(instant);
         }
     }
 
-    enum SpecifierTypeEnum
-    {
-        None,
-        Date,
-        Hour,
-        HalfHour
-    }
 
 }
