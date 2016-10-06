@@ -130,7 +130,6 @@ namespace Serilog.Sinks.RollingFile
 
             // We only take one attempt at it because repeated failures
             // to open log files REALLY slow an app down.
-
             _nextCheckpoint = _roller.GetNextCheckpoint(now);
 
             var existingFiles = Enumerable.Empty<string>();

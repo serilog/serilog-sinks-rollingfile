@@ -2,71 +2,44 @@
 
 namespace Serilog.Sinks.RollingFile.Sinks.RollingFile
 {
-    internal class Specifier
+    class Specifier
     {
-        internal const string OldStyleDateToken = "{0}";
+        public const string OldStyleDateToken = "{0}";
 
-        internal const string DateToken = "{Date}";
-        internal const string HourToken = "{Hour}";
-        internal const string HalfHourToken = "{HalfHour}";
+        const string DateToken = "{Date}";
+        const string HourToken = "{Hour}";
+        const string HalfHourToken = "{HalfHour}";
+        const string DateFormat = "yyyyMMdd";
+        const string HourFormat = "yyyyMMddHH";
+        const string HalfHourFormat = "yyyyMMddHHmm";
+        static readonly TimeSpan DateInterval = TimeSpan.FromDays(1);
+        static readonly TimeSpan HourInterval = TimeSpan.FromHours(1);
+        static readonly TimeSpan HalfHourInterval = TimeSpan.FromMinutes(30);
 
-        internal const string DateFormat = "yyyyMMdd";
-        internal const string HourFormat = "yyyyMMddHH";
-        internal const string HalfHourFormat = "yyyyMMddHHmm";
+        public static readonly Specifier Date = new Specifier("Date", DateToken, DateFormat, DateInterval);
+        public static readonly Specifier Hour = new Specifier("Hour", HourToken, HourFormat, HourInterval);
+        public static readonly Specifier HalfHour = new Specifier("HalfHour", HalfHourToken, HalfHourFormat, HalfHourInterval);
 
-        internal static readonly TimeSpan DateInterval = TimeSpan.FromDays(1);
-        internal static readonly TimeSpan HourInterval = TimeSpan.FromHours(1);
-        internal static readonly TimeSpan HalfHourInterval = TimeSpan.FromMinutes(30);
-
-        //-------------------
-
-        public static readonly Specifier Date = new Specifier(SpecifierType.Date);
-        public static readonly Specifier Hour = new Specifier(SpecifierType.Hour);
-        public static readonly Specifier HalfHour = new Specifier(SpecifierType.HalfHour);
-
-        //-------------------
-
-
-        public SpecifierType Type { get; }
         public string Name { get; }
         public string Token { get; }
         public string Format { get; }
         public TimeSpan Interval { get; }
 
-        Specifier(SpecifierType type)
+        Specifier(string name, string token, string format, TimeSpan interval)
         {
-            switch (type)
-            {
-                case SpecifierType.Date:
-                    Token = Specifier.DateToken;
-                    Format = Specifier.DateFormat;
-                    Interval = Specifier.DateInterval;
-                    break;
-
-                case SpecifierType.Hour:
-                    Token = Specifier.HourToken;
-                    Format = Specifier.HourFormat;
-                    Interval = Specifier.HourInterval;
-                    break;
-
-                case SpecifierType.HalfHour:
-                    Token = Specifier.HalfHourToken;
-                    Format = Specifier.HalfHourFormat;
-                    Interval = Specifier.HalfHourInterval;
-                    break;
-            }
-
-            Type = type;
-            Name = (Token != null ? Token.Replace("{", string.Empty).Replace("}", string.Empty) : Token);
+            Name = name;
+            Token = token;
+            Format = format;
+            Interval = interval;
         }
 
         public DateTime GetCurrentCheckpoint(DateTime instant)
         {
-            if (Type == SpecifierType.Hour)
+            if (Token == Hour.Token)
             {
                 return instant.Date.AddHours(instant.Hour);
             }
-            else if (Type == SpecifierType.HalfHour)
+            else if (Token == HalfHour.Token)
             {
                 DateTime auxDT = instant.Date.AddHours(instant.Hour);
                 if (instant.Minute >= 30)
@@ -83,36 +56,28 @@ namespace Serilog.Sinks.RollingFile.Sinks.RollingFile
             return currentCheckpoint.Add(Interval);
         }
 
-        //-------------
-
-        internal static Specifier GetFromTemplate(string template)
+        public static bool TryGetSpecifier(string template, out Specifier specifier)
         {
+            specifier = null;
+
             if (!string.IsNullOrWhiteSpace(template))
             {
-                if (template.Contains(Specifier.DateToken))
+                if (template.Contains(Specifier.Date.Token))
                 {
-                    return Specifier.Date;
+                    specifier = Specifier.Date;
                 }
-                else if (template.Contains(Specifier.HourToken))
+                else if (template.Contains(Specifier.Hour.Token))
                 {
-                    return Specifier.Hour;
+                    specifier = Specifier.Hour;
                 }
-                else if (template.Contains(Specifier.HalfHourToken))
+                else if (template.Contains(Specifier.HalfHour.Token))
                 {
-                    return Specifier.HalfHour;
+                    specifier = Specifier.HalfHour;
                 }
             }
 
-            return null;
+            return (specifier != null);
         }
 
-        //-------------
-
-        internal enum SpecifierType
-        {
-            Date,
-            Hour,
-            HalfHour
-        }
     }
 }

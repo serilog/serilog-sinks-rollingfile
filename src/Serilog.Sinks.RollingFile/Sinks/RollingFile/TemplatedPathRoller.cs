@@ -43,18 +43,18 @@ namespace Serilog.Sinks.RollingFile
 
             if (pathTemplate.Contains(Specifier.OldStyleDateToken))
                 throw new ArgumentException("The old-style date specifier " + Specifier.OldStyleDateToken +
-                    " is no longer supported, instead please use " + Specifier.DateToken);
+                    " is no longer supported, instead please use " + Specifier.Date.Token);
 
             int numSpecifiers = 0;
-            if (pathTemplate.Contains(Specifier.DateToken))
+            if (pathTemplate.Contains(Specifier.Date.Token))
                 numSpecifiers++;
-            if (pathTemplate.Contains(Specifier.HourToken))
+            if (pathTemplate.Contains(Specifier.Hour.Token))
                 numSpecifiers++;
-            if (pathTemplate.Contains(Specifier.HalfHourToken))
+            if (pathTemplate.Contains(Specifier.HalfHour.Token))
                 numSpecifiers++;
             if (numSpecifiers > 1)
                 throw new ArgumentException("The date, hour and half-hour specifiers (" +
-                    Specifier.DateToken + "," + Specifier.HourToken + "," + Specifier.HalfHourToken +
+                    Specifier.Date.Token + "," + Specifier.Hour.Token + "," + Specifier.HalfHour.Token +
                     ") cannot be used at the same time");
 
             var directory = Path.GetDirectoryName(pathTemplate);
@@ -65,29 +65,21 @@ namespace Serilog.Sinks.RollingFile
 
             directory = Path.GetFullPath(directory);
 
-            if (directory.Contains(Specifier.DateToken))
-                throw new ArgumentException("The date cannot form part of the directory name");
-            if (directory.Contains(Specifier.HourToken))
-                throw new ArgumentException("The hour specifiers cannot form part of the directory name");
-            if (directory.Contains(Specifier.HalfHourToken))
-                throw new ArgumentException("The half-hour specifiers cannot form part of the directory name");
-
-            var filenameTemplate = Path.GetFileName(pathTemplate);
-            if (!filenameTemplate.Contains(Specifier.DateToken) && 
-                !filenameTemplate.Contains(Specifier.HourToken) &&
-                !filenameTemplate.Contains(Specifier.HalfHourToken))
+            Specifier directorySpecifier;
+            if (Specifier.TryGetSpecifier(directory, out directorySpecifier))
             {
-                // If the file name doesn't use any of the admitted specifiers then it is added the date specifier
-                // as de default one.
-                filenameTemplate = Path.GetFileNameWithoutExtension(filenameTemplate) + DefaultSeparator +
-                    Specifier.DateToken + Path.GetExtension(filenameTemplate);
+                throw new ArgumentException($"The {directorySpecifier.Token} specifier cannot form part of the directory name.");
             }
 
-            //---
-            // From this point forward we don't reference the Date, Hour or HalfHour concret tokens and formats : 
-            // we will reference only the one configured as _specifier.
-
-            _specifier = Specifier.GetFromTemplate(filenameTemplate);
+            var filenameTemplate = Path.GetFileName(pathTemplate);
+            if (!Specifier.TryGetSpecifier(filenameTemplate, out _specifier))
+            {
+                // If the file name doesn't use any of the admitted specifiers then it is set the date specifier
+                // as de default one.
+                _specifier = Specifier.Date;
+                filenameTemplate = Path.GetFileNameWithoutExtension(filenameTemplate) + DefaultSeparator +
+                    _specifier.Token + Path.GetExtension(filenameTemplate);
+            }
 
             var indexOfSpecifier = filenameTemplate.IndexOf(_specifier.Token, StringComparison.Ordinal);
             var prefix = filenameTemplate.Substring(0, indexOfSpecifier);
@@ -111,7 +103,7 @@ namespace Serilog.Sinks.RollingFile
 
         public void GetLogFilePath(DateTime date, int sequenceNumber, out string path)
         {
-            DateTime currentCheckpoint = GetCurrentCheckpoint(date);
+            var currentCheckpoint = GetCurrentCheckpoint(date);
 
             var tok = currentCheckpoint.ToString(_specifier.Format, CultureInfo.InvariantCulture);
 
