@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using Xunit;
-using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.RollingFile;
-using Serilog.Tests.Support;
+using Serilog.Sinks.RollingFile.Tests.Support;
 
 namespace Serilog.Sinks.RollingFile.Tests
 {
@@ -105,7 +103,7 @@ namespace Serilog.Sinks.RollingFile.Tests
             }
             finally
             {
-                ((IDisposable)log).Dispose();
+                log.Dispose();
                 verifyWritten(verified);
                 Directory.Delete(folder, true);
             }

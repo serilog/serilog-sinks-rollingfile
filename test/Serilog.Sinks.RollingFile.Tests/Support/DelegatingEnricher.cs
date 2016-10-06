@@ -2,7 +2,7 @@
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Serilog.Tests.Support
+namespace Serilog.Sinks.RollingFile.Tests.Support
 {
     class DelegatingEnricher : ILogEventEnricher
     {

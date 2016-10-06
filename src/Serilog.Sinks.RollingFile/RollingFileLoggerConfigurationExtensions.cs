@@ -18,6 +18,7 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Formatting.Display;
+using Serilog.Sinks.File;
 using Serilog.Sinks.RollingFile;
 
 namespace Serilog
@@ -54,6 +55,7 @@ namespace Serilog
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
         /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
+        /// <param name="flushToDiskInterval">If provided, a full disk flush will be performed periodically at the specified interval.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 encoding without a byte-order mark.</remarks>
         public static LoggerConfiguration RollingFile(
@@ -66,11 +68,12 @@ namespace Serilog
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
             bool buffered = false,
-            bool shared = false)
+            bool shared = false,
+            TimeSpan? flushToDiskInterval = null)
         {
             var formatter = new MessageTemplateTextFormatter(outputTemplate, formatProvider);
             return RollingFile(sinkConfiguration, formatter, pathFormat, restrictedToMinimumLevel, fileSizeLimitBytes,
-                retainedFileCountLimit, levelSwitch, buffered, shared);
+                retainedFileCountLimit, levelSwitch, buffered, shared, flushToDiskInterval);
         }
 
         /// <summary>
@@ -95,6 +98,7 @@ namespace Serilog
         /// <param name="buffered">Indicates if flushing to the output file can be buffered or not. The default
         /// is false.</param>
         /// <param name="shared">Allow the log files to be shared by multiple processes. The default is false.</param>
+        /// <param name="flushToDiskInterval">If provided, a full disk flush will be performed periodically at the specified interval.</param>
         /// <returns>Configuration object allowing method chaining.</returns>
         /// <remarks>The file will be written using the UTF-8 encoding without a byte-order mark.</remarks>
         public static LoggerConfiguration RollingFile(
@@ -106,7 +110,8 @@ namespace Serilog
             int? retainedFileCountLimit = DefaultRetainedFileCountLimit,
             LoggingLevelSwitch levelSwitch = null,
             bool buffered = false,
-            bool shared = false)
+            bool shared = false,
+            TimeSpan? flushToDiskInterval = null)
         {
             if (sinkConfiguration == null) throw new ArgumentNullException(nameof(sinkConfiguration));
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
@@ -114,7 +119,13 @@ namespace Serilog
             if (shared && buffered)
                 throw new ArgumentException("Buffered writes are not available when file sharing is enabled.", nameof(buffered));
 
-            var sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered, shared: shared);
+            ILogEventSink sink = new RollingFileSink(pathFormat, formatter, fileSizeLimitBytes, retainedFileCountLimit, buffered: buffered, shared: shared);
+
+            if (flushToDiskInterval.HasValue)
+            {
+                sink = new PeriodicFlushToDiskSink(sink, flushToDiskInterval.Value);
+            }
+
             return sinkConfiguration.Sink(sink, restrictedToMinimumLevel, levelSwitch);
         }
     }

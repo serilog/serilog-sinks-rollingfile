@@ -1,6 +1,6 @@
 using System;
 
-namespace Serilog.Tests.Support
+namespace Serilog.Sinks.RollingFile.Tests.Support
 {
     public class DelegateDisposable : IDisposable
     {
