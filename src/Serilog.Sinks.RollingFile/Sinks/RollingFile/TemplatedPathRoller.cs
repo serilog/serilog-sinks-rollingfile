@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
- 
+
+using Serilog.Sinks.RollingFile.Sinks.RollingFile;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -26,20 +27,35 @@ namespace Serilog.Sinks.RollingFile
     //
     class TemplatedPathRoller
     {
-        const string OldStyleDateSpecifier = "{0}";
-        const string DateSpecifier = "{Date}";
-        const string DateFormat = "yyyyMMdd";
+        
         const string DefaultSeparator = "-";
+
+        const string SpecifierMatchGroup = "specifier";
+        const string SequenceNumberMatchGroup = "sequence";
 
         readonly string _pathTemplate;
         readonly Regex _filenameMatcher;
+        readonly Specifier _specifier = null;
 
         public TemplatedPathRoller(string pathTemplate)
         {
             if (pathTemplate == null) throw new ArgumentNullException(nameof(pathTemplate));
-            if (pathTemplate.Contains(OldStyleDateSpecifier))
-                throw new ArgumentException("The old-style date specifier " + OldStyleDateSpecifier +
-                    " is no longer supported, instead please use " + DateSpecifier);
+
+            if (pathTemplate.Contains(Specifier.OldStyleDateToken))
+                throw new ArgumentException("The old-style date specifier " + Specifier.OldStyleDateToken +
+                    " is no longer supported, instead please use " + Specifier.Date.Token);
+
+            int numSpecifiers = 0;
+            if (pathTemplate.Contains(Specifier.Date.Token))
+                numSpecifiers++;
+            if (pathTemplate.Contains(Specifier.Hour.Token))
+                numSpecifiers++;
+            if (pathTemplate.Contains(Specifier.HalfHour.Token))
+                numSpecifiers++;
+            if (numSpecifiers > 1)
+                throw new ArgumentException("The date, hour and half-hour specifiers (" +
+                    Specifier.Date.Token + "," + Specifier.Hour.Token + "," + Specifier.HalfHour.Token +
+                    ") cannot be used at the same time");
 
             var directory = Path.GetDirectoryName(pathTemplate);
             if (string.IsNullOrEmpty(directory))
@@ -49,28 +65,34 @@ namespace Serilog.Sinks.RollingFile
 
             directory = Path.GetFullPath(directory);
 
-            if (directory.Contains(DateSpecifier))
-                throw new ArgumentException("The date cannot form part of the directory name");
-
-            var filenameTemplate = Path.GetFileName(pathTemplate);
-            if (!filenameTemplate.Contains(DateSpecifier))
+            Specifier directorySpecifier;
+            if (Specifier.TryGetSpecifier(directory, out directorySpecifier))
             {
-                filenameTemplate = Path.GetFileNameWithoutExtension(filenameTemplate) + DefaultSeparator +
-                    DateSpecifier + Path.GetExtension(filenameTemplate);
+                throw new ArgumentException($"The {directorySpecifier.Token} specifier cannot form part of the directory name.");
             }
 
-            var indexOfSpecifier = filenameTemplate.IndexOf(DateSpecifier, StringComparison.Ordinal);
+            var filenameTemplate = Path.GetFileName(pathTemplate);
+            if (!Specifier.TryGetSpecifier(filenameTemplate, out _specifier))
+            {
+                // If the file name doesn't use any of the admitted specifiers then it is set the date specifier
+                // as de default one.
+                _specifier = Specifier.Date;
+                filenameTemplate = Path.GetFileNameWithoutExtension(filenameTemplate) + DefaultSeparator +
+                    _specifier.Token + Path.GetExtension(filenameTemplate);
+            }
+
+            var indexOfSpecifier = filenameTemplate.IndexOf(_specifier.Token, StringComparison.Ordinal);
             var prefix = filenameTemplate.Substring(0, indexOfSpecifier);
-            var suffix = filenameTemplate.Substring(indexOfSpecifier + DateSpecifier.Length);
+            var suffix = filenameTemplate.Substring(indexOfSpecifier + _specifier.Token.Length);
             _filenameMatcher = new Regex(
                 "^" +
                 Regex.Escape(prefix) +
-                "(?<date>\\d{" + DateFormat.Length + "})" +
-                "(?<inc>_[0-9]{3,}){0,1}" +
+                "(?<" + SpecifierMatchGroup + ">\\d{" + _specifier.Format.Length + "})" +
+                "(?<" + SequenceNumberMatchGroup + ">_[0-9]{3,}){0,1}" +
                 Regex.Escape(suffix) +
                 "$");
 
-            DirectorySearchPattern = filenameTemplate.Replace(DateSpecifier, "*");
+            DirectorySearchPattern = filenameTemplate.Replace(_specifier.Token, "*");
             LogFileDirectory = directory;
             _pathTemplate = Path.Combine(LogFileDirectory, filenameTemplate);
         }
@@ -81,12 +103,14 @@ namespace Serilog.Sinks.RollingFile
 
         public void GetLogFilePath(DateTime date, int sequenceNumber, out string path)
         {
-            var tok = date.ToString(DateFormat, CultureInfo.InvariantCulture);
+            var currentCheckpoint = GetCurrentCheckpoint(date);
+
+            var tok = currentCheckpoint.ToString(_specifier.Format, CultureInfo.InvariantCulture);
 
             if (sequenceNumber != 0)
                 tok += "_" + sequenceNumber.ToString("000", CultureInfo.InvariantCulture);
 
-            path = _pathTemplate.Replace(DateSpecifier, tok);
+            path = _pathTemplate.Replace(_specifier.Token, tok);
         }
 
         public IEnumerable<RollingLogFile> SelectMatches(IEnumerable<string> filenames)
@@ -97,26 +121,38 @@ namespace Serilog.Sinks.RollingFile
                 if (match.Success)
                 {
                     var inc = 0;
-                    var incGroup = match.Groups["inc"];
+                    var incGroup = match.Groups[SequenceNumberMatchGroup];
                     if (incGroup.Captures.Count != 0)
                     {
                         var incPart = incGroup.Captures[0].Value.Substring(1);
                         inc = int.Parse(incPart, CultureInfo.InvariantCulture);
                     }
 
-                    DateTime date;
-                    var datePart = match.Groups["date"].Captures[0].Value;
+                    DateTime dateTime;
+                    var dateTimePart = match.Groups[SpecifierMatchGroup].Captures[0].Value;
                     if (!DateTime.TryParseExact(
-                        datePart,
-                        DateFormat,
+                        dateTimePart,
+                        _specifier.Format,
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.None,
-                        out date))
+                        out dateTime))
                         continue;
 
-                    yield return new RollingLogFile(filename, date, inc);
+                    yield return new RollingLogFile(filename, dateTime, inc);
                 }
             }
         }
+
+        public DateTime GetCurrentCheckpoint(DateTime instant)
+        {
+            return _specifier.GetCurrentCheckpoint(instant);
+        }
+
+        public DateTime GetNextCheckpoint(DateTime instant)
+        {
+            return _specifier.GetNextCheckpoint(instant);
+        }
     }
-} 
+
+
+}
