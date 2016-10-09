@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using Xunit;
-using Serilog.Sinks.RollingFile;
 
 namespace Serilog.Sinks.RollingFile.Tests
 {

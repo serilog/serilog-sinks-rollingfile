@@ -31,7 +31,7 @@ namespace Serilog.Sinks.RollingFile
     /// the date of the first log entry written to it. Only simple date-based rolling is
     /// currently supported.
     /// </summary>
-    public sealed class RollingFileSink : ILogEventSink, IDisposable
+    public sealed class RollingFileSink : ILogEventSink, IFlushableFileSink, IDisposable
     {
         readonly TemplatedPathRoller _roller;
         readonly ITextFormatter _textFormatter;
@@ -242,6 +242,15 @@ namespace Serilog.Sinks.RollingFile
             }
 
             _nextCheckpoint = null;
+        }
+
+        /// <inheritdoc />
+        public void FlushToDisk()
+        {
+            lock (_syncRoot)
+            {
+                (_currentFile as IFlushableFileSink)?.FlushToDisk();
+            }
         }
     }
 }

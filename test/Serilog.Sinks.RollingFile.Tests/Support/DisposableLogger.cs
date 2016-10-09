@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Serilog.Tests.Support
+namespace Serilog.Sinks.RollingFile.Tests.Support
 {
     public class DisposableLogger : ILogger, IDisposable
     {
