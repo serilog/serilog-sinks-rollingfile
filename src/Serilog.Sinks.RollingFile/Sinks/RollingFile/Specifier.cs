@@ -1,83 +1,73 @@
-﻿using System;
+﻿// Copyright 2013-2016 Serilog Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-namespace Serilog.Sinks.RollingFile.Sinks.RollingFile
+using System;
+using System.Linq;
+
+namespace Serilog.Sinks.RollingFile
 {
     class Specifier
     {
-        public const string OldStyleDateToken = "{0}";
+        public static readonly Specifier Date = new Specifier("Date", "yyyyMMdd", TimeSpan.FromDays(1));
+        public static readonly Specifier Hour = new Specifier("Hour", "yyyyMMddHH", TimeSpan.FromHours(1));
+        public static readonly Specifier HalfHour = new Specifier("HalfHour", "yyyyMMddHHmm", TimeSpan.FromMinutes(30));
 
-        const string DateToken = "{Date}";
-        const string HourToken = "{Hour}";
-        const string HalfHourToken = "{HalfHour}";
-        const string DateFormat = "yyyyMMdd";
-        const string HourFormat = "yyyyMMddHH";
-        const string HalfHourFormat = "yyyyMMddHHmm";
-        static readonly TimeSpan DateInterval = TimeSpan.FromDays(1);
-        static readonly TimeSpan HourInterval = TimeSpan.FromHours(1);
-        static readonly TimeSpan HalfHourInterval = TimeSpan.FromMinutes(30);
-
-        public static readonly Specifier Date = new Specifier("Date", DateToken, DateFormat, DateInterval);
-        public static readonly Specifier Hour = new Specifier("Hour", HourToken, HourFormat, HourInterval);
-        public static readonly Specifier HalfHour = new Specifier("HalfHour", HalfHourToken, HalfHourFormat, HalfHourInterval);
-
-        public string Name { get; }
         public string Token { get; }
         public string Format { get; }
         public TimeSpan Interval { get; }
 
-        Specifier(string name, string token, string format, TimeSpan interval)
+        Specifier(string name, string format, TimeSpan interval)
         {
-            Name = name;
-            Token = token;
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            if (format == null) throw new ArgumentNullException(nameof(format));
+
+            Token = "{" + name + "}";
             Format = format;
             Interval = interval;
         }
 
         public DateTime GetCurrentCheckpoint(DateTime instant)
         {
-            if (Token == Hour.Token)
+            if (this == Hour)
             {
                 return instant.Date.AddHours(instant.Hour);
             }
-            else if (Token == HalfHour.Token)
+
+            if (this == HalfHour)
             {
-                DateTime auxDT = instant.Date.AddHours(instant.Hour);
+                var hour = instant.Date.AddHours(instant.Hour);
                 if (instant.Minute >= 30)
-                    auxDT = auxDT.AddMinutes(30);
-                return auxDT;
+                    return hour.AddMinutes(30);
+                return hour;
             }
 
             return instant.Date;
         }
 
-        public DateTime GetNextCheckpoint(DateTime instant)
+        public DateTime GetNextCheckpoint(DateTime instant) => GetCurrentCheckpoint(instant).Add(Interval);
+
+        public static bool TryGetSpecifier(string pathTemplate, out Specifier specifier)
         {
-            DateTime currentCheckpoint = GetCurrentCheckpoint(instant);
-            return currentCheckpoint.Add(Interval);
+            if (pathTemplate == null) throw new ArgumentNullException(nameof(pathTemplate));
+
+            var specifiers = new[] { HalfHour, Hour, Date }.Where(s => pathTemplate.Contains(s.Token)).ToArray();
+            
+            if (specifiers.Length > 1)
+                throw new ArgumentException("Only one interval specifier can be used in a rolling log file path.", nameof(pathTemplate));
+
+            specifier = specifiers.FirstOrDefault();
+            return specifier != null;
         }
-
-        public static bool TryGetSpecifier(string template, out Specifier specifier)
-        {
-            specifier = null;
-
-            if (!string.IsNullOrWhiteSpace(template))
-            {
-                if (template.Contains(Specifier.Date.Token))
-                {
-                    specifier = Specifier.Date;
-                }
-                else if (template.Contains(Specifier.Hour.Token))
-                {
-                    specifier = Specifier.Hour;
-                }
-                else if (template.Contains(Specifier.HalfHour.Token))
-                {
-                    specifier = Specifier.HalfHour;
-                }
-            }
-
-            return (specifier != null);
-        }
-
     }
 }

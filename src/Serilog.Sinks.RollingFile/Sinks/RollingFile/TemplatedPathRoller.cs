@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Serilog.Sinks.RollingFile.Sinks.RollingFile;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -26,8 +25,7 @@ namespace Serilog.Sinks.RollingFile
     //    Logs/log-{Date}.txt
     //
     class TemplatedPathRoller
-    {
-        
+    {        
         const string DefaultSeparator = "-";
 
         const string SpecifierMatchGroup = "specifier";
@@ -41,41 +39,19 @@ namespace Serilog.Sinks.RollingFile
         {
             if (pathTemplate == null) throw new ArgumentNullException(nameof(pathTemplate));
 
-            if (pathTemplate.Contains(Specifier.OldStyleDateToken))
-                throw new ArgumentException("The old-style date specifier " + Specifier.OldStyleDateToken +
-                    " is no longer supported, instead please use " + Specifier.Date.Token);
-
-            int numSpecifiers = 0;
-            if (pathTemplate.Contains(Specifier.Date.Token))
-                numSpecifiers++;
-            if (pathTemplate.Contains(Specifier.Hour.Token))
-                numSpecifiers++;
-            if (pathTemplate.Contains(Specifier.HalfHour.Token))
-                numSpecifiers++;
-            if (numSpecifiers > 1)
-                throw new ArgumentException("The date, hour and half-hour specifiers (" +
-                    Specifier.Date.Token + "," + Specifier.Hour.Token + "," + Specifier.HalfHour.Token +
-                    ") cannot be used at the same time");
-
             var directory = Path.GetDirectoryName(pathTemplate);
             if (string.IsNullOrEmpty(directory))
-            {
                 directory = Directory.GetCurrentDirectory();
-            }
-
-            directory = Path.GetFullPath(directory);
 
             Specifier directorySpecifier;
             if (Specifier.TryGetSpecifier(directory, out directorySpecifier))
-            {
                 throw new ArgumentException($"The {directorySpecifier.Token} specifier cannot form part of the directory name.");
-            }
+
+            directory = Path.GetFullPath(directory);
 
             var filenameTemplate = Path.GetFileName(pathTemplate);
             if (!Specifier.TryGetSpecifier(filenameTemplate, out _specifier))
             {
-                // If the file name doesn't use any of the admitted specifiers then it is set the date specifier
-                // as de default one.
                 _specifier = Specifier.Date;
                 filenameTemplate = Path.GetFileNameWithoutExtension(filenameTemplate) + DefaultSeparator +
                     _specifier.Token + Path.GetExtension(filenameTemplate);
@@ -143,16 +119,8 @@ namespace Serilog.Sinks.RollingFile
             }
         }
 
-        public DateTime GetCurrentCheckpoint(DateTime instant)
-        {
-            return _specifier.GetCurrentCheckpoint(instant);
-        }
+        public DateTime GetCurrentCheckpoint(DateTime instant) => _specifier.GetCurrentCheckpoint(instant);
 
-        public DateTime GetNextCheckpoint(DateTime instant)
-        {
-            return _specifier.GetNextCheckpoint(instant);
-        }
+        public DateTime GetNextCheckpoint(DateTime instant) => _specifier.GetNextCheckpoint(instant);
     }
-
-
 }
