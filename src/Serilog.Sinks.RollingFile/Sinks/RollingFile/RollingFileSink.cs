@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using Serilog.Core;
 using Serilog.Debugging;
@@ -100,7 +98,7 @@ namespace Serilog.Sinks.RollingFile
 
             lock (_syncRoot)
             {
-                if (_isDisposed) throw new ObjectDisposedException("The rolling file has been disposed.");
+                if (_isDisposed) throw new ObjectDisposedException("The rolling log file has been disposed.");
 
                 AlignCurrentFileTo(Clock.DateTimeNow);
 
@@ -166,8 +164,7 @@ namespace Serilog.Sinks.RollingFile
                 }
                 catch (IOException ex)
                 {
-                    var errorCode = Marshal.GetHRForException(ex) & ((1 << 16) - 1);
-                    if (errorCode == 32 || errorCode == 33)
+                    if (IOErrors.IsLockedFile(ex))
                     {
                         SelfLog.WriteLine("Rolling file target {0} was locked, attempting to open next in sequence (attempt {1})", path, attempt + 1);
                         sequence++;

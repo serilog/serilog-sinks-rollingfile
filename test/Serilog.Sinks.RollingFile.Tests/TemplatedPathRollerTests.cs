@@ -8,14 +8,7 @@ namespace Serilog.Sinks.RollingFile.Tests
     public class TemplatedPathRollerTests
     {
         [Fact]
-        public void WhenOldStyleSpecifierIsSuppliedTheExceptionIsInformative()
-        {
-            var ex = Assert.Throws<ArgumentException>(() => new TemplatedPathRoller("log-{0}.txt"));
-            Assert.True(ex.Message.Contains("{Date}"));
-        }
-
-        [Fact]
-        public void NewStyleSpecifierCannotBeProvidedInDirectory()
+        public void SpecifierCannotBeProvidedInDirectory()
         {
             var ex = Assert.Throws<ArgumentException>(() => new TemplatedPathRoller("{Date}\\log.txt"));
             Assert.True(ex.Message.Contains("directory"));
@@ -86,25 +79,6 @@ namespace Serilog.Sinks.RollingFile.Tests
         }
 
         [Fact]
-        public void TheDirectorSearchPatternUsesWildcardInPlaceOfDate()
-        {
-            var roller = new TemplatedPathRoller("Logs\\log-{Date}.txt");
-            Assert.Equal("log-*.txt", roller.DirectorySearchPattern);
-        }
-
-        [Fact]
-        public void MatchingSelectsFiles()
-        {
-            var roller = new TemplatedPathRoller("log-{Date}.txt");
-            const string example1 = "log-20131210.txt";
-            const string example2 = "log-20131210_031.txt";
-            var matched = roller.SelectMatches(new[] { example1, example2 }).ToArray();
-            Assert.Equal(2, matched.Count());
-            Assert.Equal(0, matched[0].SequenceNumber);
-            Assert.Equal(31, matched[1].SequenceNumber);
-        }
-
-        [Fact]
         public void MatchingExcludesSimilarButNonmatchingFiles()
         {
             var roller = new TemplatedPathRoller("log-{Date}.txt");
@@ -114,12 +88,36 @@ namespace Serilog.Sinks.RollingFile.Tests
             Assert.Equal(0, matched.Count());
         }
 
-        [Fact]
-        public void MatchingParsesDates()
+        [Theory]
+        [InlineData("Logs\\log-{Date}.txt")]
+        [InlineData("Logs\\log-{Hour}.txt")]
+        [InlineData("Logs\\log-{HalfHour}.txt")]
+        public void TheDirectorSearchPatternUsesWildcardInPlaceOfDate(string template)
         {
-            var roller = new TemplatedPathRoller("log-{Date}.txt");
-            const string newer = "log-20150101.txt";
-            const string older = "log-20141231.txt";
+            var roller = new TemplatedPathRoller(template);
+            Assert.Equal("log-*.txt", roller.DirectorySearchPattern);
+        }
+
+        [Theory]
+        [InlineData("log-{Date}.txt", "log-20131210.txt", "log-20131210_031.txt")]
+        [InlineData("log-{Hour}.txt", "log-2013121013.txt", "log-2013121013_031.txt")]
+        [InlineData("log-{HalfHour}.txt", "log-201312100100.txt", "log-201312100230_031.txt")]
+        public void MatchingSelectsFiles(string template, string zeroth, string thirtyFirst)
+        {
+            var roller = new TemplatedPathRoller(template);
+            var matched = roller.SelectMatches(new[] { zeroth, thirtyFirst }).ToArray();
+            Assert.Equal(2, matched.Count());
+            Assert.Equal(0, matched[0].SequenceNumber);
+            Assert.Equal(31, matched[1].SequenceNumber);
+        }
+
+        [Theory]
+        [InlineData("log-{Date}.txt", "log-20150101.txt", "log-20141231.txt")]
+        [InlineData("log-{Hour}.txt", "log-2015010110.txt", "log-2015010109.txt")]
+        [InlineData("log-{HalfHour}.txt", "log-201501011400.txt", "log-201501011330.txt")]
+        public void MatchingParsesSubstitutions(string template, string newer, string older)
+        {
+            var roller = new TemplatedPathRoller(template);
             var matched = roller.SelectMatches(new[] { older, newer }).OrderByDescending(m => m.DateTime).Select(m => m.Filename).ToArray();
             Assert.Equal(new[] { newer, older }, matched);
         }
