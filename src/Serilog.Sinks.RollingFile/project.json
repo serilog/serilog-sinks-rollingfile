@@ -1,5 +1,5 @@
 {
-  "version": "3.2.0-*",
+  "version": "3.2.1-*",
   "description": "The rolling file sink for Serilog - Simple .NET logging with fully-structured events",
   "authors": [ "Serilog Contributors" ],
   "packOptions": {
