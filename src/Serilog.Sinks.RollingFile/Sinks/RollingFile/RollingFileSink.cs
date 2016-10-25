@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using Serilog.Core;
 using Serilog.Debugging;
@@ -100,7 +98,7 @@ namespace Serilog.Sinks.RollingFile
 
             lock (_syncRoot)
             {
-                if (_isDisposed) throw new ObjectDisposedException("The rolling file has been disposed.");
+                if (_isDisposed) throw new ObjectDisposedException("The rolling log file has been disposed.");
 
                 AlignCurrentFileTo(Clock.DateTimeNow);
 
@@ -126,11 +124,11 @@ namespace Serilog.Sinks.RollingFile
 
         void OpenFile(DateTime now)
         {
-            var date = now.Date;
+            var currentCheckpoint = _roller.GetCurrentCheckpoint(now);
 
             // We only take one attempt at it because repeated failures
             // to open log files REALLY slow an app down.
-            _nextCheckpoint = date.AddDays(1);
+            _nextCheckpoint = _roller.GetNextCheckpoint(now);
 
             var existingFiles = Enumerable.Empty<string>();
             try
@@ -140,13 +138,13 @@ namespace Serilog.Sinks.RollingFile
             }
             catch (DirectoryNotFoundException) { }
 
-            var latestForThisDate = _roller
+            var latestForThisCheckpoint = _roller
                 .SelectMatches(existingFiles)
-                .Where(m => m.Date == date)
+                .Where(m => m.DateTime == currentCheckpoint)
                 .OrderByDescending(m => m.SequenceNumber)
                 .FirstOrDefault();
 
-            var sequence = latestForThisDate != null ? latestForThisDate.SequenceNumber : 0;
+            var sequence = latestForThisCheckpoint != null ? latestForThisCheckpoint.SequenceNumber : 0;
 
             const int maxAttempts = 3;
             for (var attempt = 0; attempt < maxAttempts; attempt++)
@@ -166,8 +164,7 @@ namespace Serilog.Sinks.RollingFile
                 }
                 catch (IOException ex)
                 {
-                    var errorCode = Marshal.GetHRForException(ex) & ((1 << 16) - 1);
-                    if (errorCode == 32 || errorCode == 33)
+                    if (IOErrors.IsLockedFile(ex))
                     {
                         SelfLog.WriteLine("Rolling file target {0} was locked, attempting to open next in sequence (attempt {1})", path, attempt + 1);
                         sequence++;
@@ -196,7 +193,7 @@ namespace Serilog.Sinks.RollingFile
 
             var newestFirst = _roller
                 .SelectMatches(potentialMatches)
-                .OrderByDescending(m => m.Date)
+                .OrderByDescending(m => m.DateTime)
                 .ThenByDescending(m => m.SequenceNumber)
                 .Select(m => m.Filename);
 

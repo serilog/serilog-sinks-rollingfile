@@ -1,4 +1,4 @@
-// Copyright 2013-2016 Serilog Contributors
+﻿// Copyright 2013-2016 Serilog Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,24 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
- 
-using System;
+
+using System.IO;
 
 namespace Serilog.Sinks.RollingFile
 {
-    class RollingLogFile
+    static class IOErrors
     {
-        public RollingLogFile(string filename, DateTime dateTime, int sequenceNumber)
+        public static bool IsLockedFile(IOException ex)
         {
-            Filename = filename;
-            DateTime = dateTime;
-            SequenceNumber = sequenceNumber;
+#if HRESULTS
+            var errorCode = System.Runtime.InteropServices.Marshal.GetHRForException(ex) & ((1 << 16) - 1);
+            return errorCode == 32 || errorCode == 33;
+#else
+            return true;
+#endif
         }
-
-        public string Filename { get; }
-
-        public DateTime DateTime { get; }
-
-        public int SequenceNumber { get; }
     }
-} 
+}
