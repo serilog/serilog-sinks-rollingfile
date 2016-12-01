@@ -9,7 +9,7 @@
     "iconUrl": "http://serilog.net/images/serilog-sink-nuget.png"
   },
   "dependencies": {
-    "Serilog.Sinks.File": "3.1.0"
+    "Serilog.Sinks.File": "3.2.0-dev-00762"
   },
   "buildOptions": {
     "keyFile": "../../assets/Serilog.snk",
@@ -18,7 +18,7 @@
   },
   "frameworks": {
     "net4.5": {
-      "buildOptions": {"define": ["SHARING", "HRESULTS"]}
+      "buildOptions": {"define": ["HRESULTS"]}
     },
     "netstandard1.3": {
       "dependencies": {
