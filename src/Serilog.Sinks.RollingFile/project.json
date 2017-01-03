@@ -9,7 +9,7 @@
     "iconUrl": "http://serilog.net/images/serilog-sink-nuget.png"
   },
   "dependencies": {
-    "Serilog.Sinks.File": "3.2.0-dev-00762"
+    "Serilog.Sinks.File": "3.2.0"
   },
   "buildOptions": {
     "keyFile": "../../assets/Serilog.snk",
