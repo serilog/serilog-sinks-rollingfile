@@ -4,6 +4,7 @@ using System.IO;
 using Xunit;
 using Serilog.Events;
 using Serilog.Sinks.RollingFile.Tests.Support;
+using Serilog.Configuration;
 
 namespace Serilog.Sinks.RollingFile.Tests
 {
@@ -13,6 +14,31 @@ namespace Serilog.Sinks.RollingFile.Tests
         public void LogEventsAreEmittedToTheFileNamedAccordingToTheEventTimestamp()
         {
             TestRollingEventSequence(Some.InformationEvent());
+        }
+
+        [Fact]
+        public void EventsAreWrittenWhenSharingIsEnabled()
+        {
+            TestRollingEventSequence(
+                (pf, wt) => wt.RollingFile(pf, shared: true),
+                new[] { Some.InformationEvent() });
+        }
+
+        [Fact]
+        public void EventsAreWrittenWhenBufferingIsEnabled()
+        {
+            TestRollingEventSequence(
+                (pf, wt) => wt.RollingFile(pf, buffered: true),
+                new[] { Some.InformationEvent() });
+        }
+
+        [Fact]
+        public void EventsAreWrittenWhenDiskFlushingIsEnabled()
+        {
+            // Doesn't test flushing, but ensures we haven't broken basic logging
+            TestRollingEventSequence(
+                (pf, wt) => wt.RollingFile(pf, flushToDiskInterval: TimeSpan.FromMilliseconds(50)),
+                new[] { Some.InformationEvent() });
         }
 
         [Fact]
@@ -30,7 +56,9 @@ namespace Serilog.Sinks.RollingFile.Tests
                      e2 = Some.InformationEvent(e1.Timestamp.AddDays(1)),
                      e3 = Some.InformationEvent(e2.Timestamp.AddDays(5));
 
-            TestRollingEventSequence(new[] { e1, e2, e3 }, 2,
+            TestRollingEventSequence(
+                (pf, wt) => wt.RollingFile(pf, retainedFileCountLimit: 2),
+                new[] { e1, e2, e3 },
                 files =>
                 {
                     Assert.Equal(3, files.Count);
@@ -70,21 +98,23 @@ namespace Serilog.Sinks.RollingFile.Tests
 
         static void TestRollingEventSequence(params LogEvent[] events)
         {
-            TestRollingEventSequence(events, null, f => {});
+            TestRollingEventSequence(
+                (pf, wt) => wt.RollingFile(pf, retainedFileCountLimit: null),
+                events);
         }
 
         static void TestRollingEventSequence(
+            Action<string, LoggerSinkConfiguration> configureFile,
             IEnumerable<LogEvent> events,
-            int? retainedFiles,
-            Action<IList<string>> verifyWritten)
+            Action<IList<string>> verifyWritten = null)
         {
             var fileName = Some.String() + "-{Date}.txt";
             var folder = Some.TempFolderPath();
             var pathFormat = Path.Combine(folder, fileName);
 
-            var log = new LoggerConfiguration()
-                .WriteTo.RollingFile(pathFormat, retainedFileCountLimit: retainedFiles)
-                .CreateLogger();
+            var config = new LoggerConfiguration();
+            configureFile(pathFormat, config.WriteTo);
+            var log = config.CreateLogger();
 
             var verified = new List<string>();
 
@@ -104,7 +134,7 @@ namespace Serilog.Sinks.RollingFile.Tests
             finally
             {
                 log.Dispose();
-                verifyWritten(verified);
+                verifyWritten?.Invoke(verified);
                 Directory.Delete(folder, true);
             }
         }

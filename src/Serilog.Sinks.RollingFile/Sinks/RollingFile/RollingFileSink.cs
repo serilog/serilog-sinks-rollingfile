@@ -71,11 +71,6 @@ namespace Serilog.Sinks.RollingFile
             if (fileSizeLimitBytes.HasValue && fileSizeLimitBytes < 0) throw new ArgumentException("Negative value provided; file size limit must be non-negative");
             if (retainedFileCountLimit.HasValue && retainedFileCountLimit < 1) throw new ArgumentException("Zero or negative value provided; retained file count limit must be at least 1");
 
-#if !SHARING
-            if (shared)
-                throw new NotSupportedException("File sharing is not supported on this platform.");
-#endif
-
             _roller = new TemplatedPathRoller(pathFormat);
             _textFormatter = textFormatter;
             _fileSizeLimitBytes = fileSizeLimitBytes;
@@ -154,13 +149,9 @@ namespace Serilog.Sinks.RollingFile
 
                 try
                 {
-#if SHARING
                     _currentFile = _shared ?
                         (ILogEventSink)new SharedFileSink(path, _textFormatter, _fileSizeLimitBytes, _encoding) :
                         new FileSink(path, _textFormatter, _fileSizeLimitBytes, _encoding, _buffered);
-#else
-                    _currentFile = new FileSink(path, _textFormatter, _fileSizeLimitBytes, _encoding, _buffered);
-#endif
                 }
                 catch (IOException ex)
                 {
