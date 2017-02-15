@@ -30,14 +30,6 @@ log-20160702.txt
 
 > **Important:** By default, only one process may write to a log file at a given time. See _Shared log files_ below for information on multi-process sharing.
 
-### Format specifiers
-
-The sink supports three different format specifiers:
-
-* `{Date}` Creates a file per day. Filename uses the `yyyyMMdd` format.
-* `{Hour}` Creates a file per hour. Filename uses the `yyyyMMddHH` format.
-* `{HalfHour}` Creates a file per half hour. Filename uses the `yyyyMMddHHmm` format.
-
 ### Limits
 
 To avoid bringing down apps with runaway disk usage the rolling file sink **limits file size to 1GB by default**. The limit can be changed or removed using the `fileSizeLimitBytes` parameter.
@@ -161,6 +153,16 @@ To enable multi-process shared log files, set `shared` to `true`:
 ```csharp
     .WriteTo.RollingFile("log-{Date}.txt", shared: true)
 ```
+
+### Filename format specifiers
+
+The sink supports three different filename format specifiers:
+
+* `{Date}` Creates a file per day. Filenames use the `yyyyMMdd` format.
+* `{Hour}` Creates a file per hour. Filenames use the `yyyyMMddHH` format.
+* `{HalfHour}` Creates a file per half hour. Filenames use the `yyyyMMddHHmm` format.
+
+If a log file path is provided without one of the specifiers above, `{Date}` will be inserted by default.
 
 ### Performance
 
