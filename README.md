@@ -16,7 +16,7 @@ To configure the sink in C# code, call `WriteTo.RollingFile()` during logger con
 var log = new LoggerConfiguration()
     .WriteTo.RollingFile("log-{Date}.txt")
     .CreateLogger();
-    
+
 Log.Information("This will be written to the rolling file set");
 ```
 
@@ -33,6 +33,7 @@ log-20160702.txt
 ### Date placeholders
 
 The Appender supports three different date time placeholders:
+
 * {Date} Creates a file per day. Filename uses the `yyyyMMdd` format.
 * {Hour} Creates a file per hour. Filename uses the `yyyyMMddhh24mi` format. 
 * {HalfHour} Creates a file per half hour. Filename uses the `yyyyMMddhh24mi` format. 
