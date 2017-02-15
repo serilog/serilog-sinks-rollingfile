@@ -29,6 +29,12 @@ log-20160702.txt
 ```
 
 > **Important:** By default, only one process may write to a log file at a given time. See _Shared log files_ below for information on multi-process sharing.
+### Date placeholders
+
+The Appender supports three different date time placeholders:
+* {Date} Creates a file per day. Filename uses the `yyyyMMdd` format.
+* {Hour} Creates a file per hour. Filename uses the `yyyyMMddhh24mi` format. 
+* {HalfHour} Creates a file per half hour. Filename uses the `yyyyMMddhh24mi` format. 
 
 ### Limits
 
