@@ -30,13 +30,13 @@ log-20160702.txt
 
 > **Important:** By default, only one process may write to a log file at a given time. See _Shared log files_ below for information on multi-process sharing.
 
-### format specifiers
+### Format specifiers
 
-The Appender supports three different format specifiers:
+The sink supports three different format specifiers:
 
-* {Date} Creates a file per day. Filename uses the `yyyyMMdd` format.
-* {Hour} Creates a file per hour. Filename uses the `yyyyMMddHH` format.
-* {HalfHour} Creates a file per half hour. Filename uses the `yyyyMMddHHmm` format.
+* `{Date}` Creates a file per day. Filename uses the `yyyyMMdd` format.
+* `{Hour}` Creates a file per hour. Filename uses the `yyyyMMddHH` format.
+* `{HalfHour}` Creates a file per half hour. Filename uses the `yyyyMMddHHmm` format.
 
 ### Limits
 
