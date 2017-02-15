@@ -16,7 +16,7 @@ To configure the sink in C# code, call `WriteTo.RollingFile()` during logger con
 var log = new LoggerConfiguration()
     .WriteTo.RollingFile("log-{Date}.txt")
     .CreateLogger();
-    
+
 Log.Information("This will be written to the rolling file set");
 ```
 
@@ -29,6 +29,14 @@ log-20160702.txt
 ```
 
 > **Important:** By default, only one process may write to a log file at a given time. See _Shared log files_ below for information on multi-process sharing.
+
+### Format specifiers
+
+The sink supports three different format specifiers:
+
+* `{Date}` Creates a file per day. Filename uses the `yyyyMMdd` format.
+* `{Hour}` Creates a file per hour. Filename uses the `yyyyMMddHH` format.
+* `{HalfHour}` Creates a file per half hour. Filename uses the `yyyyMMddHHmm` format.
 
 ### Limits
 
