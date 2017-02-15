@@ -29,6 +29,7 @@ log-20160702.txt
 ```
 
 > **Important:** By default, only one process may write to a log file at a given time. See _Shared log files_ below for information on multi-process sharing.
+
 ### Date placeholders
 
 The Appender supports three different date time placeholders:
