@@ -168,7 +168,7 @@ If a log file path is provided without one of the specifiers above, `{Date}` wil
 
 By default, the rolling file sink will flush each event written through it to disk. To improve write performance, specifying `buffered: true` will permit the underlying stream to buffer writes.
 
-The [Serilog.Sinks.Async](https://github.com/serilog/serilog-sinks-async) package can be used to wrap the rolling file sink and perform all disk accss on a background worker thread.
+The [Serilog.Sinks.Async](https://github.com/serilog/serilog-sinks-async) package can be used to wrap the rolling file sink and perform all disk access on a background worker thread.
 
 ### Alternatives
 
