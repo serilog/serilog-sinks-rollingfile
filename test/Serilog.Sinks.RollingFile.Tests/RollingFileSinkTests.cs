@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Xunit;
 using Serilog.Events;
 using Serilog.Sinks.RollingFile.Tests.Support;
@@ -94,6 +95,13 @@ namespace Serilog.Sinks.RollingFile.Tests
                 if (disposable != null) disposable.Dispose();
                 Directory.Delete(temp, true);
             }
+        }
+
+        [Fact]
+        public void AssemblyVersionIsFixedAt200()
+        {
+            var assembly = typeof(RollingFileLoggerConfigurationExtensions).GetTypeInfo().Assembly;
+            Assert.Equal("2.0.0.0", assembly.GetName().Version.ToString(4));
         }
 
         static void TestRollingEventSequence(params LogEvent[] events)
