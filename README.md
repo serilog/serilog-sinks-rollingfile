@@ -2,6 +2,8 @@
 
 Writes [Serilog](https://serilog.net) events to a set of text files, one per day.
 
+> **Update:** the rolling functionality in this sink is being improved and merged into the [_Serilog.Sinks.File_](https://github.com/serilog/serilog-sinks-file) package. See [this post](https://nblumhardt.com/2017/10/serilog-file-logging/) for more information. 
+
 ### Getting started
 
 Install the [Serilog.Sinks.RollingFile](https://nuget.org/packages/serilog.sinks.rollingfile) package from NuGet:
