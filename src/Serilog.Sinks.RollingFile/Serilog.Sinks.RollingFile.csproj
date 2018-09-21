@@ -17,6 +17,8 @@
     <PackageIconUrl>https://serilog.net/images/serilog-sink-nuget.png</PackageIconUrl>
     <PackageProjectUrl>https://serilog.net</PackageProjectUrl>
     <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/serilog/serilog-sinks-rollingfile</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <!-- Don't reference the full NETStandard.Library -->
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
