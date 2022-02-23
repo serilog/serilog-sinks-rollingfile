@@ -25,7 +25,7 @@ Log.Information("This will be written to the rolling file set");
 The filename should include the `{Date}` placeholder, which will be replaced with the date of the events contained in the file. Filenames use the `yyyyMMdd` date format so that files can be ordered using a lexicographic sort:
 
 ```
-log-20160631.txt
+log-20160630.txt
 log-20160701.txt
 log-20160702.txt
 ```
