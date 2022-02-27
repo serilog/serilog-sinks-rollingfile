@@ -2,7 +2,7 @@
 
 Writes [Serilog](https://serilog.net) events to a set of text files, one per day.
 
-> **Important note:** the rolling functionality in this sink has been improved and merged into the [_Serilog.Sinks.File_](https://github.com/serilog/serilog-sinks-file) package. _RollingFile_ will be maintained for the foreseeable future, however _File_ is recommended for new applications.
+> ⚠️ **Deprecation notice:** the rolling functionality in this sink has been improved and merged into the [_Serilog.Sinks.File_](https://github.com/serilog/serilog-sinks-file) package.
 
 ### Getting started
 
